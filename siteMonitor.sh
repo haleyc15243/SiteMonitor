@@ -25,15 +25,15 @@ setupLogging() {
 }
 
 logToOut() {
-	echo -e "$1" 1>&3
+	echo -e "$1\n" 1>&3
 }
 
 logToFile() {
-	echo -e "$1"
+	echo -e "$1\n"
 }
 
 log() {
-	echo -e "$1" | tee /dev/fd/3
+	echo -e "$1\n" | tee /dev/fd/3
 }
 
 prompt() {
@@ -43,12 +43,12 @@ prompt() {
 getEmailContent() {
 	last_checked_string=''
 	if [[ ! -f "$last_checked_file" ]]; then
-		logToFile "Last checked file doesn't exist... Creating.\n"
+		logToFile "Last checked file doesn't exist... Creating."
 		touch "$last_checked_file"
 		last_checked_string="$body_changes"
 	else
 		last_checked_time=$(date -r "$last_checked_file" "+%Y-%m-%d %H:%M:%S") 
-		log "Last checked: $last_checked_time\n"
+		log "Last checked: $last_checked_time"
 		last_checked_string="$body_changes $since_string: $last_checked_time"
 	fi
 	logToFile "Email contents is:\n$from_string\n$to_string\n$subject_string\n\n$last_checked_string\n\t$1"
@@ -58,16 +58,16 @@ getEmailContent() {
 getPassword() {
 	pw=''
 	if [ ! -f "$pw_file" ]; then
-		logToFile "Password file doesn't exist, getting password...\n"
+		logToFile "Password file doesn't exist, getting password..."
 		prompt "Enter the password: " pw
-		logToFile "User entered password: $pw\n"
+		logToFile "User entered password: $pw"
 		echo $pw > "$pw_file"
 	else
 		pw=$(<"$pw_file")
 		if [ -z "$pw" ]; then
 			logToFile "Password file exists, but is empty. Getting password...\n"
 			prompt "Re-enter the password: " pw
-			logToFile "User entered password: $pw\n"
+			logToFile "User entered password: $pw"
 			echo $pw > "$pw_file"
 		fi
 	fi
@@ -76,17 +76,17 @@ getPassword() {
 
 getUserEmail() {
 	if [ ! -f "$email_file" ]; then
-		logToFile "Email file doesn't exist, getting email...\n"
+		logToFile "Email file doesn't exist, getting email..."
 		touch "$email_file"
 		prompt "Enter the email where you would like to receive updates: " email
-		logToFile "User entered email: $email\n"
+		logToFile "User entered email: $email"
 		echo $email > "$email_file"
 	else
 		email=$(<"$email_file")
 		if [ -z "$email" ]; then
-			logToFile "Email file exists, but is empty. Getting email...\n"
+			logToFile "Email file exists, but is empty. Getting email..."
 			prompt "Enter the email where you would like to receive updates: " email
-			logToFile "User entered email: $email\n"
+			logToFile "User entered email: $email"
 			echo $email > "$email_file"
 		#else
 			#email="'head -1 $email_file'"
@@ -98,13 +98,13 @@ getUserEmail() {
 checkHashFile() {
 	first_run=0
 	if [ ! -f "$hash_file" ]; then
-		logToFile "Hash file does not exist... Creating\n"
+		logToFile "Hash file does not exist... Creating"
 		touch hashes.txt
 		first_run=1
 	else
 		hash_contents=$(<"$hash_file")
 		if [ -z "$hash_contents" ]; then
-			logToFile "Hash file exists but is empty\n"
+			logToFile "Hash file exists but is empty"
 			first_run=1
 		else
 			first_run=0
@@ -115,7 +115,7 @@ checkHashFile() {
 
 doSiteEvals() {
 	paste -d '\n' "$sites_file" "$hash_file" > combined.txt
-	logToFile "\nCombined sites and hashes result is:\n\n$(cat combined.txt)\n\n"
+	logToFile "\nCombined sites and hashes result is:\n\n$(cat combined.txt)\n"
 	changed_sites=''
 	line_count=0
 	while read -r site_url && read -r old_hash;
@@ -126,19 +126,21 @@ doSiteEvals() {
 		hash=($(shasum -a 256 $site_file))
 		logToFile "\tHash is $hash"
 		if [ -z "$old_hash" ]; then
-			logToFile "\tSite $site_url is new!\n"
+			logToFile "\tSite $site_url is new!"
 			if [ first_run ]; then
 				echo "$hash" > "$hash_file"
 			else
 				echo $"\n$hash" >> "$hash_file"
 			fi
 		else
+			logToFile "Old hash is: $old_hash"
 			if [ "$old_hash" != "$hash" ]; then
-				log "\t Site $line_count has changed!\n"
-				changed_sites="$changed_sites\n$site_url"
-				sed -i '($line_count)s/.*/$hash' "$hash_file"
+				log "\t Site $line_count has changed!"
+				changed_sites="${changed_sites}\n${site_url}"
+				logToFile "Changed sites is: $changed_sites"
+				sed -i '$(line_count)s/.*/$hash' "$hash_file"
 			else
-				logToFile "\tSite $site_url has not changed.\n"
+				logToFile "\tSite $site_url has not changed."
 			fi
 			((line_count++))
 		fi
